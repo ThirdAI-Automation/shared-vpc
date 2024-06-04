@@ -68,6 +68,8 @@ Enjoy!
 CDK Commands Can be found here 
 [CDK AWS Documentation](https://docs.aws.amazon.com/cdk/v2/guide/cli.html)
 
+Also I initialized this project as -> [github](https://github.com/aws/aws-cdk?tab=readme-ov-file)
+
 # How to select Profile
 
 If you have multiple AWS Environment, just setup the one before doing `cdk deploy`
