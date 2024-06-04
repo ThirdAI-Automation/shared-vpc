@@ -76,3 +76,8 @@ If you have multiple AWS Environment, just setup the one before doing `cdk deplo
 ```shell
 export AWS_PROFILE=YOUR_AWS_PROFILE_NAME
 ```
+
+This Stack is stage agnostic, so we will simply deploy it as
+```shell
+cdk deploy
+```
