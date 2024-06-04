@@ -63,3 +63,14 @@ command.
  * `cdk docs`        open CDK documentation
 
 Enjoy!
+
+# CDK Commands
+CDK Commands Can be found here 
+[CDK AWS Documentation](https://docs.aws.amazon.com/cdk/v2/guide/cli.html)
+
+# How to select Profile
+
+If you have multiple AWS Environment, just setup the one before doing `cdk deploy`
+```shell
+export AWS_PROFILE=YOUR_AWS_PROFILE_NAME
+```
