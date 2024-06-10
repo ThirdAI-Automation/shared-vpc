@@ -15,8 +15,13 @@ print(f"Using AWS profile: {aws_profile}")
 print(f"Deploying to AWS account: {aws_account}")
 print(f"Deploying to AWS region: {aws_region}")
 
-
 app = cdk.App()
-SharedVpcStack(app, "SharedVpcStack")
+
+ns = app.node.try_get_context("ns")
+
+print("Namespace:", ns)
+
+
+SharedVpcStack(app, f"{ns}-SharedVpcStack")
 
 app.synth()

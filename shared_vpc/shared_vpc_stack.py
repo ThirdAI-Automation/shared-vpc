@@ -43,16 +43,16 @@ class SharedVpcStack(Stack):
         # Output the VPC ID and subnet IDs for reference
         CfnOutput(self, "VpcId", value=self.vpc.vpc_id)
         for subnet in self.vpc.public_subnets:
-            name = f"rx-lang-PublicSubnetID-{subnet.node.id}"
-            CfnOutput(self, name, value=subnet.subnet_id, export_name=name)
-            name = f"rx-lang-PublicSubnet-ROUTETB-{subnet.node.id}"
-            CfnOutput(self, name, value=subnet.route_table.route_table_id, export_name=name)
-            name = f"rx-lang-PublicSubnet-AZ-{subnet.node.id}"
-            CfnOutput(self, name, value=subnet.availability_zone, export_name=name)
+            name = f"{id}-{subnet.node.id}"
+            CfnOutput(self, name, value=subnet.subnet_id)
+            name = f"{id}-ROUTETB-{subnet.node.id}"
+            CfnOutput(self, name, value=subnet.route_table.route_table_id)
+            name = f"{id}-AZ-{subnet.node.id}"
+            CfnOutput(self, name, value=subnet.availability_zone)
         for subnet in self.vpc.private_subnets:
-            name = f"rx-lang-PrivateSubnetID{subnet.node.id}"
-            CfnOutput(self, name, value=subnet.subnet_id, export_name=name)
-            name = f"rx-lang-PrivateSubnet-ROUTETB-{subnet.node.id}"
-            CfnOutput(self, name, value=subnet.route_table.route_table_id, export_name=name)
-            name = f"rx-lang-PrivateSubnet-AZ-{subnet.node.id}"
-            CfnOutput(self, name, value=subnet.availability_zone, export_name=name)
+            name = f"{id}-{subnet.node.id}"
+            CfnOutput(self, name, value=subnet.subnet_id)
+            name = f"{id}-ROUTETB-{subnet.node.id}"
+            CfnOutput(self, name, value=subnet.route_table.route_table_id)
+            name = f"{id}-AZ-{subnet.node.id}"
+            CfnOutput(self, name, value=subnet.availability_zone)

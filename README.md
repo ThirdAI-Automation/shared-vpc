@@ -79,5 +79,34 @@ export AWS_PROFILE=YOUR_AWS_PROFILE_NAME
 
 This Stack is stage agnostic, so we will simply deploy it as
 ```shell
-cdk deploy
+cdk deploy --context ns=SAMPLE_NAME
 ```
+Here `SAMPLE_NAME` can be anything like "infra"
+
+Also if you have multiple AWS config, Please make use the `~/.aws/config` and `~/.aws/credentialas` files are proper and you set the appropriate profile as 
+```
+export AWS_PROFILE=SAMPLE_PROFILE
+```
+
+For example if you AWS Profiles are like this
+
+```❯ cat ~/.aws/credentials
+[sourav-amplify]
+aws_access_key_id=AKISAMPLE
+aws_secret_access_key=AKISAMPLE
+
+[ssourav-mac]
+aws_access_key_id=AKISAMPLE
+aws_secret_access_key=AKISAMPLE
+```
+
+```
+❯ cat ~/.aws/config
+[profile sourav-amplify]
+region=eu-west-1
+
+[profile sourav-mac]
+region = eu-west-1
+```
+
+And you want to use the `sourav-mac` profile then use `export AWS_PROFILE=sourav-mac`
