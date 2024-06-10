@@ -1,3 +1,8 @@
+# IMPORTANT
+
+This stack creates a new VPC and also It needs one EIP. Usually there is a Regionwise-accountwise limit. If the stack failes due to that,
+Please delete the stack manually, make sure the resource can be allocated and then try again. You can contact AWS Support
+
 
 # Welcome to your CDK Python project!
 
