@@ -4,6 +4,7 @@ from aws_cdk import (
     CfnOutput,
     aws_ec2 as ec2,
 )
+from aws_cdk.aws_ec2 import CfnEIP
 
 class SharedVpcStack(Stack):
 
@@ -43,16 +44,19 @@ class SharedVpcStack(Stack):
         # Output the VPC ID and subnet IDs for reference
         CfnOutput(self, "VpcId", value=self.vpc.vpc_id)
         for subnet in self.vpc.public_subnets:
-            name = f"{id}-{subnet.node.id}"
+            name = f"{subnet.node.id}"
             CfnOutput(self, name, value=subnet.subnet_id)
-            name = f"{id}-ROUTETB-{subnet.node.id}"
+            name = f"ROUTETB-{subnet.node.id}"
             CfnOutput(self, name, value=subnet.route_table.route_table_id)
-            name = f"{id}-AZ-{subnet.node.id}"
+            name = f"AZ-{subnet.node.id}"
             CfnOutput(self, name, value=subnet.availability_zone)
         for subnet in self.vpc.private_subnets:
-            name = f"{id}-{subnet.node.id}"
+            name = f"{subnet.node.id}"
             CfnOutput(self, name, value=subnet.subnet_id)
-            name = f"{id}-ROUTETB-{subnet.node.id}"
+            name = f"ROUTETB-{subnet.node.id}"
             CfnOutput(self, name, value=subnet.route_table.route_table_id)
-            name = f"{id}-AZ-{subnet.node.id}"
+            name = f"AZ-{subnet.node.id}"
             CfnOutput(self, name, value=subnet.availability_zone)
+        for resource in self.node.find_all():
+            if isinstance(resource, CfnEIP):
+                CfnOutput(self, "NATGatewayEIP", value=resource.ref)
