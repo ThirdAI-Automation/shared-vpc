@@ -3,13 +3,28 @@ from aws_cdk import (
     Stack,
     CfnOutput,
     aws_ec2 as ec2,
+    aws_logs as logs,
+    aws_iam as iam
 )
 from aws_cdk.aws_ec2 import CfnEIP
+
 
 class SharedVpcStack(Stack):
 
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
+
+        flow_log_role = iam.Role(self, "FlowLogRole",
+            assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonAPIGatewayPushToCloudWatchLogs")
+            ]
+        )
+        
+        flow_log_group = logs.LogGroup(self, "VpcFlowLogs",
+            retention=logs.RetentionDays.ONE_MONTH  # choose retention based on your needs
+        )
+
 
         self.vpc = ec2.Vpc(
             self, "SharedVPC",
@@ -40,6 +55,99 @@ class SharedVpcStack(Stack):
                 )
             ]
         )
+        ec2.CfnFlowLog(self, "VpcFlowLog",
+            resource_id=self.vpc.vpc_id,
+            resource_type="VPC",
+            traffic_type="ALL",  # You can also use "REJECT" or "ACCEPT"
+            deliver_logs_permission_arn=flow_log_role.role_arn,
+            log_group_name=flow_log_group.log_group_name
+        )
+
+        custom_nacl = ec2.NetworkAcl(self, "CustomPrivateNACL",
+            vpc=self.vpc,
+            subnet_selection=ec2.SubnetSelection(subnets=self.vpc.private_subnets)
+        )
+
+        # Allow inbound from ALB to container port 8000
+        custom_nacl.add_entry("AllowALBtoFargate",
+            cidr=ec2.AclCidr.any_ipv4(),  # You can restrict to just the ALB IP range if known
+            rule_number=100,
+            traffic=ec2.AclTraffic.tcp_port(8000),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.INGRESS
+        )
+
+        # Allow inbound ephemeral return traffic
+        custom_nacl.add_entry("AllowEphemeralInbound",
+            cidr=ec2.AclCidr.any_ipv4(),
+            rule_number=110,
+            traffic=ec2.AclTraffic.tcp_port_range(1024, 65535),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.INGRESS
+        )
+
+        # Allow outbound to ALB from Fargate on port 443 or 80 (if health checks or callbacks go there)
+        custom_nacl.add_entry("AllowOutboundToALB",
+            cidr=ec2.AclCidr.any_ipv4(),
+            rule_number=120,
+            traffic=ec2.AclTraffic.tcp_port(443),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.EGRESS
+        )
+
+        # Allow outbound ephemeral for return traffic
+        custom_nacl.add_entry("AllowEphemeralOutbound",
+            cidr=ec2.AclCidr.any_ipv4(),
+            rule_number=130,
+            traffic=ec2.AclTraffic.tcp_port_range(1024, 65535),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.EGRESS
+        )
+
+        public_nacl = ec2.NetworkAcl(self, "PublicNACL",
+            vpc=self.vpc,
+            subnet_selection=ec2.SubnetSelection(subnets=self.vpc.public_subnets)
+        )
+
+        public_nacl.add_entry("AllowHTTPSInbound",
+            rule_number=100,
+            cidr=ec2.AclCidr.any_ipv4(),
+            traffic=ec2.AclTraffic.tcp_port(443),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.INGRESS
+        )
+
+        public_nacl.add_entry("AllowHTTPInbound",
+            rule_number=101,
+            cidr=ec2.AclCidr.any_ipv4(),
+            traffic=ec2.AclTraffic.tcp_port(80),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.INGRESS
+        )
+
+        public_nacl.add_entry("AllowEphemeralOutbound",
+            rule_number=110,
+            cidr=ec2.AclCidr.any_ipv4(),
+            traffic=ec2.AclTraffic.tcp_port_range(1024, 65535),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.EGRESS
+        )
+        public_nacl.add_entry("AllowEphemeralInbound",
+            rule_number=102,
+            cidr=ec2.AclCidr.any_ipv4(),
+            traffic=ec2.AclTraffic.tcp_port_range(1024, 65535),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.INGRESS
+        )
+        public_nacl.add_entry("AllowHTTPSOutbound",
+            rule_number=103,
+            cidr=ec2.AclCidr.any_ipv4(),
+            traffic=ec2.AclTraffic.tcp_port(443),
+            rule_action=ec2.Action.ALLOW,
+            direction=ec2.TrafficDirection.EGRESS
+        )
+
+
 
         # Output the VPC ID and subnet IDs for reference
         CfnOutput(self, "VpcId", value=self.vpc.vpc_id)
