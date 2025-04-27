@@ -8,53 +8,64 @@ from aws_cdk import (
 )
 from aws_cdk.aws_ec2 import CfnEIP
 
-
-class SharedVpcStack(Stack):
-
-    def __init__(self, scope: Construct, id: str, **kwargs) -> None:
+class VPCStack(Stack):
+    def __init__(self, scope: Construct, id: str, stage: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        flow_log_role = iam.Role(self, "FlowLogRole",
+        flow_log_role = iam.Role(self, f"FlowLogRole-{stage}",
             assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonAPIGatewayPushToCloudWatchLogs")
             ]
         )
         
-        flow_log_group = logs.LogGroup(self, "VpcFlowLogs",
+        flow_log_group = logs.LogGroup(self, f"VpcFlowLogs-{stage}",
             retention=logs.RetentionDays.ONE_MONTH  # choose retention based on your needs
         )
 
-
-        self.vpc = ec2.Vpc(
-            self, "SharedVPC",
-            # cidr="10.0.0.0/16",
-            ip_addresses=ec2.IpAddresses.cidr("10.0.0.0/16"),
-            max_azs=3,
-            nat_gateways=1,  # Single NAT gateway for cost optimization
-            subnet_configuration=[
+        if stage == "prod":
+            cidr = "10.0.0.0/16"
+            subnet_configuration = [
                 ec2.SubnetConfiguration(
                     name="Public",
                     subnet_type=ec2.SubnetType.PUBLIC,
-                    cidr_mask=22  # Larger CIDR block for public subnet
+                    cidr_mask=20
                 ),
                 ec2.SubnetConfiguration(
                     name="PrivateProd",
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,  # Use PRIVATE_WITH_EGRESS
-                    cidr_mask=24  # Standard size for production
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    cidr_mask=20
+                ),
+            ]
+        else:
+            cidr = "10.1.0.0/16"
+            subnet_configuration = [
+                ec2.SubnetConfiguration(
+                    name="Public",
+                    subnet_type=ec2.SubnetType.PUBLIC,
+                    cidr_mask=20  # 4091 usable IPs
                 ),
                 ec2.SubnetConfiguration(
                     name="PrivateDev",
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,  # Use PRIVATE_WITH_EGRESS
-                    cidr_mask=24  # Standard size for development
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    cidr_mask=20
                 ),
                 ec2.SubnetConfiguration(
                     name="PrivateShared",
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,  # Use PRIVATE_WITH_EGRESS
-                    cidr_mask=20  # Larger CIDR block for shared private subnet
-                )
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    cidr_mask=20
+                ),
             ]
+
+
+        self.vpc = ec2.Vpc(
+            self, "VPC",
+            ip_addresses=ec2.IpAddresses.cidr(cidr),
+            max_azs=3,
+            nat_gateways=1,  # Single NAT gateway for cost optimization
+            subnet_configuration=subnet_configuration
         )
+
         ec2.CfnFlowLog(self, "VpcFlowLog",
             resource_id=self.vpc.vpc_id,
             resource_type="VPC",
@@ -147,9 +158,6 @@ class SharedVpcStack(Stack):
             direction=ec2.TrafficDirection.EGRESS
         )
 
-
-
-        # Output the VPC ID and subnet IDs for reference
         CfnOutput(self, "VpcId", value=self.vpc.vpc_id)
         for subnet in self.vpc.public_subnets:
             name = f"{subnet.node.id}"
